@@ -1,0 +1,14 @@
+# key: -: in progress, +: finished, ?: working but unfinished
+
+[+] working '%d' in 'printf'
+[+] kernel panic
+[+] functional printf
+[+] GDT and IDT
+[?] logging
+[?] keyboard drivers
+[ ] virtual memory
+[ ] filesystem
+[ ] multithreading/multiprocessing
+[ ] protected and real mode
+[ ] more drivers (sound, mouse, etc..)
+[ ] graphics mode && some kind of GUI (probably never going to happen..)
