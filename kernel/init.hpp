@@ -40,7 +40,7 @@ extern "C" {
 #include <unistd.h>
 
 #include "descriptor_tables.h"
-#include "version.hpp"
+#include "version.h"
 #include "timer.h"
 #include "dev/keyboard/keyboard.hpp"
 // #include "dev/speaker/speaker.h"

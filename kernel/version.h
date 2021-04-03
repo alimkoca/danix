@@ -1,5 +1,5 @@
 //
-// version.hpp
+// version.h
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,17 +28,10 @@
 // SOFTWARE.
 
 
-#if !defined(VERSION_HPP)
-#define VERSION_HPP
-
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#if !defined(VERSION_H)
+#define VERSION_H
 
 #define VERSION "0.0.2"
+#define BEEP
 
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus
-
-#endif // VERSION_HPP
+#endif // VERSION_H

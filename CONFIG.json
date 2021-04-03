@@ -1,0 +1,6 @@
+{
+	"CC": "i686-elf-gcc",
+	"CXX": "i686-elf-g++",
+	"LD": "i686-elf-ld",
+	"NASM": "nasm"
+}

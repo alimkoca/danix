@@ -74,5 +74,6 @@ void clear();
 void putpixel(int, int, uint8_t);
 void movecursor();
 void screen_scroll_check();
+char* readf();
 
 #endif // VGA_H

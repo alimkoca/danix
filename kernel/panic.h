@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include "dev/speaker/speaker.h"
+#include "version.h"
 
 void panic(string, ...);
 

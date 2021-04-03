@@ -37,7 +37,9 @@ extern "C" {
 void panic(string str, ...) {
 	// printc(str, f_white);
 	
+#if defined(BEEP)
 	speaker_play(1230);
+#endif // BEEP
 
 	asm volatile("cli");
 

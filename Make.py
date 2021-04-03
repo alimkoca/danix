@@ -3,6 +3,9 @@
 import subprocess as sub
 import os
 import shlex
+import json
+
+CONFIG = json.loads(open("CONFIG.json", "r").read())
 
 def system(*args):
     print(combine(args))
@@ -50,13 +53,13 @@ def replace_ext(one, two):
     split.append(two)
     return ".".join(split)
 
-CC = "i686-elf-gcc"
+CC = CONFIG["CC"]
 CC_ARGS = "-m32 -c -nostdlib -nostdinc -nostartfiles -Iinclude -Wno-builtin-declaration-mismatch"
-CXX = "i686-elf-g++"
+CXX = CONFIG["CXX"]
 CXX_ARGS = CC_ARGS + " -std=c++17"
-NASM = "nasm"
+NASM = CONFIG["NASM"]
 NASM_ARGS = "-felf32"
-LD = "i686-elf-ld"
+LD = CONFIG["LD"]
 LD_ARGS = "-T linker.ld -m elf_i386"
 
 TARGET = "danix.elf"
