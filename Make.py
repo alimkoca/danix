@@ -95,6 +95,9 @@ for i in CFILES:
 #     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
 
 def make_main():
+    if not os.path.exists("iso/init"):
+        os.mkdir("iso/init")
+
     if not os.path.exists("output"):
         os.mkdir("output")
 
