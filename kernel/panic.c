@@ -1,5 +1,5 @@
 //
-// panic.cpp
+// panic.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -27,10 +27,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
 
 #include "panic.h"
 
@@ -115,7 +111,3 @@ void panic(string str, ...) {
 	}
 	for (;;);
 }
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus

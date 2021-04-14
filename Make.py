@@ -67,8 +67,8 @@ def replace_ext(one, two):
 
 CC = CONFIG["CC"]
 CC_ARGS = "-m32 -c -nostdlib -nostdinc -nostartfiles -Iinclude -Wno-builtin-declaration-mismatch"
-CXX = CONFIG["CXX"]
-CXX_ARGS = CC_ARGS + " -std=c++17"
+# CXX = CONFIG["CXX"]
+# CXX_ARGS = CC_ARGS + " -std=c++17"
 NASM = CONFIG["NASM"]
 NASM_ARGS = "-felf32"
 LD = CONFIG["LD"]
@@ -91,8 +91,8 @@ for i in ASSEMBLY:
     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
 for i in CFILES:
     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
-for i in CPPFILES:
-    OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
+# for i in CPPFILES:
+#     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
 
 def make_main():
     if not os.path.exists("output"):
@@ -116,9 +116,9 @@ def make_main():
         print("compiling all c files...")
         for i in CFILES:
             sys_run(CC, CC_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
-        print("compiling all c++ files...")
-        for i in CPPFILES:
-            sys_run(CXX, CXX_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+        # print("compiling all c++ files...")
+        # for i in CPPFILES:
+        #     sys_run(CXX, CXX_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
         print("linking all object files...")
         sys_run(LD, LD_ARGS, "-o", TARGET, OUTPUTS)
         sys_run("cp", TARGET, "iso/init/boot.bin")

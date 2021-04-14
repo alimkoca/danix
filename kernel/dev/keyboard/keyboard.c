@@ -1,5 +1,5 @@
 //
-// keyboard.cpp
+// keyboard.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,11 +28,7 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
-
-#include "keyboard.hpp"
+#include "keyboard.h"
 
 uint8_t current_char = '\0';
 
@@ -141,7 +137,3 @@ uint8_t __getch(int verbose) {
 	}
 	return temp;
 }
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus

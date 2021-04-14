@@ -1,5 +1,5 @@
 //
-// shutdown.cpp
+// init.h
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,17 +28,19 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#if !defined(INIT_H)
+#define INIT_H
 
-#include "shutdown.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-void shutdown() {
-	printf("[ LOG ]: SHUTTING DOWN NOW!\n");
-	outw(0x604, 0x2000);
-}
+#include "descriptor_tables.h"
+#include "version.h"
+#include "timer.h"
+#include "dev/keyboard/keyboard.h"
+// #include "dev/speaker/speaker.h"
 
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus
+void kinit();
+
+#endif // INIT_H

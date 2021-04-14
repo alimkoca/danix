@@ -1,5 +1,5 @@
 //
-// string.cpp
+// assembly.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,39 +28,51 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#include "assembly.h"
 
-#include "string.h"
-
-char* strconv(uint32_t num, int base) {
-	/*
-	static char repr[] = "0123456789ABCDEF";
-	static char buff[50];
-	char* ptr = &buff[49];
-	*ptr = '\0';
-	do {
-		*ptr-- = repr[num % base];
-		num /= base;
-	} while (num != 0);
-	return ptr;
-	*/
-	static char Representation[] = "0123456789ABCDEF";
-    static char buffer[50];
-    char *ptr;
-
-    ptr = &buffer[49];
-    *ptr = '\0';
-
-    do
-    {
-        *--ptr = Representation[num % base];
-        num /= base;
-    } while (num != 0);
-    return (ptr);
+uint8_t inb(uint16_t port) {
+	uint8_t r;
+	asm volatile("inb %1, %0"
+        : "=a"(r)
+        : "Nd"(port));
+	return r;
 }
 
-// #if defined(__cplusplus)
+uint32_t inl(uint16_t port) {
+	uint32_t ret;
+    asm volatile("in %%dx,%%eax"
+        : "=a"(ret)
+        : "d"(port));
+    return ret;
 }
-// #endif // __cplusplus
+
+uint16_t inw(uint16_t port) {
+	uint16_t ret;
+	asm volatile("inw %1, %0" 
+		: "=a" (ret) 
+		: "dN" (port));
+	return ret;
+}
+
+void outb(uint16_t port, uint8_t value) {
+	asm volatile("outb %0, %1"
+        :
+        : "a"(value), "Nd"(port)
+        :);
+}
+
+void outl(uint16_t port, uint32_t value) {
+	asm volatile("out %%eax,%%dx" 
+		:
+		: "a"(value), "d"(port));	
+}
+
+void outw(uint16_t port, uint16_t value) {
+	asm volatile("outw %%ax,%%dx"
+        :
+        : "dN"(port), "a"(value));	
+}
+
+void sti() {
+	asm volatile("sti");
+}

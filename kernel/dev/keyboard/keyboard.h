@@ -1,5 +1,5 @@
 //
-// init.hpp
+// keyboard.h
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,27 +28,24 @@
 // SOFTWARE.
 
 
-#if !defined(INIT_HPP)
-#define INIT_HPP
+#if !defined(KEYBOARD_H)
+#define KEYBOARD_H
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#define getch() __getch(1)
 
+#include <sys/types.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "../../isr.h"
 
-#include "descriptor_tables.h"
-#include "version.h"
-#include "timer.h"
-#include "dev/keyboard/keyboard.hpp"
-// #include "dev/speaker/speaker.h"
+extern uint8_t current_char;
+extern uint8_t keyboard_map[128];
 
-void kinit();
+void init_keyboard();
+void keyboard_enable();
+void keyboard_disable();
+void keyboard_restart();
+static void keyboard_handler(registers_t);
 
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus
+uint8_t __getch(int);
 
-#endif // INIT_HPP
+#endif // KEYBOARD_H

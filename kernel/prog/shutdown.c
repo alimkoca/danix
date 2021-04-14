@@ -1,5 +1,5 @@
 //
-// main.cpp
+// shutdown.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,21 +28,9 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#include "shutdown.h"
 
-
-#include "main.hpp"
-
-void kmain() {
-	kinit();
-	
-	while (1) getch(); // print all characters typed
-	
-	for (;;); // infinite loop for all eternity
+void shutdown() {
+	printf("[ LOG ]: SHUTTING DOWN NOW!\n");
+	outw(0x604, 0x2000);
 }
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus

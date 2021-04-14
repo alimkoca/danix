@@ -1,7 +1,7 @@
 //
-// assembly.cpp
+// speaker.c
 //
-// created at 27/03/2021 10:07:53
+// created at 01/04/2021 14:48:20
 // written by llamaking136
 //
 
@@ -28,59 +28,43 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#include "speaker.h"
 
-#include "assembly.h"
-
-uint8_t inb(uint16_t port) {
-	uint8_t r;
-	asm volatile("inb %1, %0"
-        : "=a"(r)
-        : "Nd"(port));
-	return r;
+void init_speaker() {
+	outb(0x61, inb(0x61) | 0x1);
 }
 
-uint32_t inl(uint16_t port) {
-	uint32_t ret;
-    asm volatile("in %%dx,%%eax"
-        : "=a"(ret)
-        : "d"(port));
-    return ret;
+void speaker_play(uint32_t hz) {
+	uint32_t Div;
+ 	uint8_t tmp;
+
+ 	Div = 1193180 / hz;
+ 	outb(0x43, 0xb6);
+ 	outb(0x42, (uint8_t) (Div) );
+ 	outb(0x42, (uint8_t) (Div >> 8));
+
+ 	tmp = inb(0x61);
+  	if (tmp != (tmp | 3)) {
+ 		outb(0x61, tmp | 3);
+ 	}
 }
 
-uint16_t inw(uint16_t port) {
-	uint16_t ret;
-	asm volatile("inw %1, %0" 
-		: "=a" (ret) 
-		: "dN" (port));
-	return ret;
+void speaker_stop() {
+	uint8_t tmp = inb(0x61) & 0xFC;
+ 	outb(0x61, tmp);
 }
 
-void outb(uint16_t port, uint8_t value) {
-	asm volatile("outb %0, %1"
-        :
-        : "a"(value), "Nd"(port)
-        :);
+void speaker_beep(uint32_t hz, uint64_t len) {
+	speaker_play(hz);
+	usleep(len);
+	speaker_stop();
 }
 
-void outl(uint16_t port, uint32_t value) {
-	asm volatile("out %%eax,%%dx" 
-		:
-		: "a"(value), "d"(port));	
+void victory_beep() {
+	speaker_beep(600, 500);
 }
 
-void outw(uint16_t port, uint16_t value) {
-	asm volatile("outw %%ax,%%dx"
-        :
-        : "dN"(port), "a"(value));	
+void bell_beep() {
+	// speaker_beep(600, 60);
+	speaker_beep(1100, 60);
 }
-
-void sti() {
-	asm volatile("sti");
-}
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus

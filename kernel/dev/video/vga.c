@@ -1,5 +1,5 @@
 //
-// vga.cpp
+// vga.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -27,10 +27,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
 
 #include "vga.h"
 
@@ -249,7 +245,3 @@ void movecursor() {
 }
 
 char* readf() {} // blank for now
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus

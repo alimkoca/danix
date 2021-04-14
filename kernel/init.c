@@ -1,5 +1,5 @@
 //
-// keyboard.hpp
+// init.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,32 +28,23 @@
 // SOFTWARE.
 
 
-#if !defined(KEYBOARD_HPP)
-#define KEYBOARD_HPP
+#include "init.h"
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
-
-#define getch() __getch(1)
-
-#include <sys/types.h>
-#include <stdio.h>
-#include "../../isr.h"
-
-extern uint8_t current_char;
-extern uint8_t keyboard_map[128];
-
-void init_keyboard();
-void keyboard_enable();
-void keyboard_disable();
-void keyboard_restart();
-static void keyboard_handler(registers_t);
-
-uint8_t __getch(int);
-
-// #if defined(__cplusplus)
+void kinit() {
+	clear();
+	printf("[ LOG ]: re-enabling interrupts...\n");
+	asm volatile("sti");
+	printf("[ LOG ]: initalizing descriptor_tables...\n");
+	init_descriptor_tables();
+	printf("[ LOG ]: initalizing timer to %d Hz...\n", 1000);
+	init_timer(1000);
+	printf("[ LOG ]: initalizing keyboard...\n");
+	init_keyboard();
+	printf("[ LOG ]: initalizing speaker...\n");
+	init_speaker();
+	printf("[ LOG ]: done initalizing all!\n");
+	printf("DANIX, version %s\n", VERSION);
+#if defined(BEEP)
+	victory_beep();
+#endif // BEEP
 }
-// #endif // __cplusplus
-
-#endif // KEYBOARD_HPP

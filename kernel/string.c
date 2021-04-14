@@ -1,5 +1,5 @@
 //
-// main.hpp
+// string.c
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,21 +28,31 @@
 // SOFTWARE.
 
 
-#if !defined(MAIN_HPP)
-#define MAIN_HPP
+#include "string.h"
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+char* strconv(uint32_t num, int base) {
+	/*
+	static char repr[] = "0123456789ABCDEF";
+	static char buff[50];
+	char* ptr = &buff[49];
+	*ptr = '\0';
+	do {
+		*ptr-- = repr[num % base];
+		num /= base;
+	} while (num != 0);
+	return ptr;
+	*/
+	static char Representation[] = "0123456789ABCDEF";
+    static char buffer[50];
+    char *ptr;
 
-// #include "assembly.h"
-#include "dev/keyboard/keyboard.hpp"
-// #include "dev/vga.h"
-#include <stdio.h>
-#include "init.hpp"
+    ptr = &buffer[49];
+    *ptr = '\0';
 
-// #if defined(__cplusplus)
+    do
+    {
+        *--ptr = Representation[num % base];
+        num /= base;
+    } while (num != 0);
+    return (ptr);
 }
-// #endif // __cplusplus
-
-#endif // MAIN_HPP

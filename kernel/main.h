@@ -1,5 +1,5 @@
 //
-// init.cpp
+// main.h
 //
 // created at 27/03/2021 10:07:53
 // written by llamaking136
@@ -28,31 +28,13 @@
 // SOFTWARE.
 
 
-// #if defined(__cplusplus)
-extern "C" {
-// #endif // __cplusplus
+#if !defined(MAIN_H)
+#define MAIN_H
 
-#include "init.hpp"
+// #include "assembly.h"
+#include "dev/keyboard/keyboard.h"
+// #include "dev/vga.h"
+#include <stdio.h>
+#include "init.h"
 
-void kinit() {
-	clear();
-	printf("[ LOG ]: re-enabling interrupts...\n");
-	asm volatile("sti");
-	printf("[ LOG ]: initalizing descriptor_tables...\n");
-	init_descriptor_tables();
-	printf("[ LOG ]: initalizing timer to %d Hz...\n", 1000);
-	init_timer(1000);
-	printf("[ LOG ]: initalizing keyboard...\n");
-	init_keyboard();
-	printf("[ LOG ]: initalizing speaker...\n");
-	init_speaker();
-	printf("[ LOG ]: done initalizing all!\n");
-	printf("DANIX, version %s\n", VERSION);
-#if defined(BEEP)
-	victory_beep();
-#endif // BEEP
-}
-
-// #if defined(__cplusplus)
-}
-// #endif // __cplusplus
+#endif // MAIN_H
