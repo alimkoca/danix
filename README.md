@@ -15,3 +15,8 @@ For your building system, edit the `CONFIG.json` file to your specifications.
 
 Tutorials/Code used:
 * www.jamesmolloy.co.uk
+
+Screenshots:
+
+![Running on QEMU](./screenshots/qemu_1.png)
+![Running on Real Hardware](./screenshots/hardware_1.png)
