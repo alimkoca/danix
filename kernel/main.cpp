@@ -38,7 +38,7 @@ extern "C" {
 void kmain() {
 	kinit();
 	
-	// while (1) putc(getch(), f_white); // print all characters printed
+	while (1) getch(); // print all characters typed
 	
 	for (;;); // infinite loop for all eternity
 }

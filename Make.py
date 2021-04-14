@@ -4,8 +4,20 @@ import subprocess as sub
 import os
 import shlex
 import json
+import platform as plat
 
-CONFIG = json.loads(open("CONFIG.json", "r").read())
+sys = os.sys
+
+GITHUB = "llamaking136/danix"
+
+CONFIG_GLOBAL = json.loads(open("CONFIG.json", "r").read())
+
+try:
+    CONFIG = CONFIG_GLOBAL[plat.system()]
+except KeyError:
+    print("error: configuration for system " + plat.system() + " not found, stopping", file = sys.stderr)
+    print("if you think this is an issue, create a new issue at my GitHub: https://github.com/" + GITHUB, file = sys.stderr)
+    exit(2)
 
 def system(*args):
     print(combine(args))
@@ -34,7 +46,7 @@ def combine(*args):
     for i in args[-1]:
         # result += i + " "
         for ii in i:
-            result += ii + " "        
+            result += ii + " "
     return result
 
 def change_path(orig, targ):

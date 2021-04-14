@@ -66,6 +66,7 @@ extern uint16_t pos_x;
 extern uint16_t pos_y;
 extern uint16_t* vidmem;
 
+void putchar(int8_t, colors, uint16_t, uint16_t);
 void putc(int8_t, colors);
 void printc(string, colors);
 // void printl();

@@ -34,3 +34,7 @@ void init_timer(u32int frequency)
     outb(0x40, l);
     outb(0x40, h);
 }
+
+uint64_t millis() {
+	return tick;
+}

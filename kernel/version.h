@@ -32,6 +32,6 @@
 #define VERSION_H
 
 #define VERSION "0.0.2"
-#define BEEP
+// #define BEEP
 
 #endif // VERSION_H

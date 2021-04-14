@@ -10,5 +10,6 @@
 extern uint64_t tick;
 
 void init_timer(u32int frequency);
+uint64_t millis();
 
 #endif

@@ -35,6 +35,8 @@
 extern "C" {
 // #endif // __cplusplus
 
+#define getch() __getch(1)
+
 #include <sys/types.h>
 #include <stdio.h>
 #include "../../isr.h"
@@ -48,7 +50,7 @@ void keyboard_disable();
 void keyboard_restart();
 static void keyboard_handler(registers_t);
 
-uint8_t getch();
+uint8_t __getch(int);
 
 // #if defined(__cplusplus)
 }

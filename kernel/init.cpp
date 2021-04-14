@@ -47,8 +47,10 @@ void kinit() {
 	printf("[ LOG ]: initalizing speaker...\n");
 	init_speaker();
 	printf("[ LOG ]: done initalizing all!\n");
-	victory_beep();
 	printf("DANIX, version %s\n", VERSION);
+#if defined(BEEP)
+	victory_beep();
+#endif // BEEP
 }
 
 // #if defined(__cplusplus)

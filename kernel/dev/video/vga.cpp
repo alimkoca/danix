@@ -39,6 +39,14 @@ uint16_t pos_y = 0;
 
 uint16_t* vidmem = (uint16_t*)0xb8000;
 
+void putchar(int8_t chr, colors col, uint16_t x, uint16_t y) {
+	uint8_t attributeByte = (0 << 4) | (col & 0x0f);
+	uint16_t attribute = attributeByte << 8;
+	uint16_t *location;
+	location = vidmem + (y*80 + x);
+	*location = chr | attribute;
+}
+
 void putc(int8_t chr, colors col) {
 	// screen_scroll_check(current_loc);
 	// if (chr == '\n') {
@@ -49,9 +57,11 @@ void putc(int8_t chr, colors col) {
 	// vidmem[(pos_y * 80 + pos_x) * 2] = chr;
 	// vidmem[current_loc++] = col;
 	// movecursor(amnt_chars++);
-	uint8_t attributeByte = (0 << 4) | (col & 0x0f);
-	uint16_t attribute = attributeByte << 8;
-	uint16_t *location;
+
+	if (pos_x >= 80) {
+		pos_x = 0;
+		pos_y ++;
+	}
 
 	if (chr == 0x08 && pos_x) {
 		pos_x--;
@@ -64,7 +74,7 @@ void putc(int8_t chr, colors col) {
 		pos_y++;
 	} else if (chr == '\b') {
 		if (pos_x <= 0) {
-			goto pos_y_bell_beep;
+			// goto pos_y_bell_beep;
 			pos_y--;
 		}
 pos_y_bell_beep:
@@ -76,18 +86,15 @@ pos_y_bell_beep:
 		goto pos_y_bell_beep_done;
 pos_y_bell_beep_done:
 		// pos_x <= 0 ? (pos_y <= 0 ? bell_beep() : pos_y--) : pos_x--;
-		location = vidmem + (pos_y*80 + pos_x - 1);
-		*location = ' ' | attribute;
+		// location = vidmem + (pos_y*80 + pos_x - 1);
+		// *location = ' ' | attribute;
+		putchar(' ', col, pos_x--, pos_y);
 	} else if (chr >= ' ') {
-		location = vidmem + (pos_y*80 + pos_x);
-		*location = chr | attribute;
-		pos_x++;
+		// location = vidmem + (pos_y*80 + pos_x);
+		// *location = chr | attribute;
+		putchar(chr, col, pos_x++, pos_y);
 	}
 
-	if (pos_x >= 80) {
-		pos_x = 0;
-		pos_y ++;
-	}
 
 	screen_scroll_check();
 	movecursor();

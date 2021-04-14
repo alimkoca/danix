@@ -130,12 +130,15 @@ static void keyboard_handler(registers_t regs) {
 	}
 }
 
-uint8_t getch() {
+uint8_t __getch(int verbose) {
 	// uint8_t result = keyboard_map[inb(0x60)];
 	// return result ? result : '\0';
 	while (current_char == '\0');
 	uint8_t temp = current_char;
 	current_char = '\0';
+	if (verbose) {
+		putc(temp, f_white);
+	}
 	return temp;
 }
 
