@@ -5636,3 +5636,2765 @@ uint8_t getch() {
 
 [FILE]::[FILE_END]
 [BACKUP]::[BAK_END]
+[BACKUP]::[MSG back to c]
+[BACKUP]::[BAK_BEGIN 2021-04-14 11:08:32]
+[DIR]::[NEW_DIR boot]
+[DIR]::[NEW_DIR iso]
+[DIR]::[NEW_DIR include]
+[DIR]::[NEW_DIR kernel]
+[DIR]::[NEW_DIR iso/init]
+[DIR]::[NEW_DIR iso/boot]
+[DIR]::[NEW_DIR iso/boot/grub]
+[DIR]::[NEW_DIR include/sys]
+[DIR]::[NEW_DIR kernel/prog]
+[DIR]::[NEW_DIR kernel/dev]
+[DIR]::[NEW_DIR kernel/dev/video]
+[DIR]::[NEW_DIR kernel/dev/speaker]
+[DIR]::[NEW_DIR kernel/dev/keyboard]
+[FILE]::[FILE_BEGIN Makefile]
+.PHONY: all clean run kernel
+
+all:
+	@./Make.py
+
+clean:
+	@./Make.py clean
+
+run:
+	@./Make.py run
+
+kernel:
+	@./Make.py kernel
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN CONFIG.json]
+{
+	"Darwin": {
+		"CC": "i686-elf-gcc",
+		"CXX": "i686-elf-g++",
+		"LD": "i686-elf-ld",
+		"NASM": "nasm"
+	},
+	"Linux": {
+		"CC": "gcc",
+		"CXX": "g++",
+		"LD": "ld",
+		"NASM": "nasm"
+	}
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN TODO]
+# key: -: in progress, +: finished, ?: working but unfinished
+
+[+] working '%d' in 'printf'
+[+] kernel panic
+[+] functional printf
+[+] GDT and IDT
+[?] logging
+[?] keyboard drivers
+[ ] virtual memory
+[ ] filesystem
+[ ] multithreading/multiprocessing
+[ ] protected and real mode
+[ ] more drivers (sound, mouse, etc..)
+[ ] graphics mode && some kind of GUI (probably never going to happen..)
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN README.md]
+# danix
+My personal Operating System
+
+Read `TODO` to see what I have accomplished and need to do.
+
+This is a basic x86 OS and I have no plan for it to go far.
+If you do wish to contribute, please follow these rules:
+
+* Format code so it is easily readable and editable
+* Use single-line comments when needed
+* Please don't use unnecessary code
+* Provide a good description on why your idea(s) or code should be added
+
+For your building system, edit the `CONFIG.json` file to your specifications.
+
+Tutorials/Code used:
+* www.jamesmolloy.co.uk
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN VERSION]
+0.0.2
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN Make.py]
+#!/usr/local/bin/python3
+
+import subprocess as sub
+import os
+import shlex
+import json
+import platform as plat
+
+sys = os.sys
+
+GITHUB = "llamaking136/danix"
+
+CONFIG_GLOBAL = json.loads(open("CONFIG.json", "r").read())
+
+try:
+    CONFIG = CONFIG_GLOBAL[plat.system()]
+except KeyError:
+    print("error: configuration for system " + plat.system() + " not found, stopping", file = sys.stderr)
+    print("if you think this is an issue, create a new issue at my GitHub: https://github.com/" + GITHUB, file = sys.stderr)
+    exit(2)
+
+def system(*args):
+    print(combine(args))
+    return os.system(combine(args))
+
+def sys_run(*args, ignore = False):
+    if system(args) and not ignore:
+        print("error: sys_run returned false", file = os.sys.stderr)
+        exit(1)
+
+def not_found(filename):
+    print("error: file '" + filename + "' not found, stopping", file = os.sys.stderr)
+    exit(1)
+
+def fix_out(lst):
+    amnt = 0
+    for i in range(len(lst)):
+        if lst[i + amnt] == "":
+            del lst[i + amnt]
+            amnt += 1
+    return lst
+
+def combine(*args):
+    # return " ".join(args)
+    result = ""
+    for i in args[-1]:
+        # result += i + " "
+        for ii in i:
+            result += ii + " "
+    return result
+
+def change_path(orig, targ):
+    path = orig.split("/")[-1]
+    return targ + "/" + path
+
+def get_out(args):
+    args = shlex.split(args)
+    return fix_out(sub.Popen(args, stdout = sub.PIPE).communicate()[0].decode("utf-8").split("\n"))
+
+def replace_ext(one, two):
+    split = one.split(".")
+    del split[-1]
+    if len(split) == 0:
+        raise Exception
+    split.append(two)
+    return ".".join(split)
+
+CC = CONFIG["CC"]
+CC_ARGS = "-m32 -c -nostdlib -nostdinc -nostartfiles -Iinclude -Wno-builtin-declaration-mismatch"
+# CXX = CONFIG["CXX"]
+# CXX_ARGS = CC_ARGS + " -std=c++17"
+NASM = CONFIG["NASM"]
+NASM_ARGS = "-felf32"
+LD = CONFIG["LD"]
+LD_ARGS = "-T linker.ld -m elf_i386"
+
+TARGET = "danix.elf"
+ISO = "danix.iso"
+
+KERNEL = "."
+
+# SOURCE = get_out("find . -name '*.asm'")
+
+ASSEMBLY = get_out("find " + KERNEL + " \\( -name '*.asm' -o -name '*.s' \\)")
+# ASSEMBLY.insert(0, "boot/boot.asm")
+# print(ASSEMBLY)
+CFILES = get_out("find " + KERNEL + " -name '*.c'")
+CPPFILES = get_out("find " + KERNEL + " -name '*.cpp'")
+OUTPUTS = ""
+for i in ASSEMBLY:
+    OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
+for i in CFILES:
+    OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
+# for i in CPPFILES:
+#     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
+
+def make_main():
+    if not os.path.exists("output"):
+        os.mkdir("output")
+
+    # if not os.path.exists("boot/boot.o"):
+        # print("compiling bootloader...")
+        # sys_run(NASM, NASM_ARGS, "-o", "boot/boot.o", "boot/boot.asm")
+
+    # if not os.path.exists(TARGET):
+        # print("compiling all C files...")
+        # for i in SOURCE:
+        #     sys_run(CC, CC_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+        # print("linking all object files...")
+        # sys_run(LD, LD_ARGS, "-o", TARGET, OUTPUTS, "boot/boot.o")
+
+    if not os.path.exists(TARGET):
+        print("compiling all assembly files...")
+        for i in ASSEMBLY:
+            sys_run(NASM, NASM_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+        print("compiling all c files...")
+        for i in CFILES:
+            sys_run(CC, CC_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+        # print("compiling all c++ files...")
+        # for i in CPPFILES:
+        #     sys_run(CXX, CXX_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+        print("linking all object files...")
+        sys_run(LD, LD_ARGS, "-o", TARGET, OUTPUTS)
+        sys_run("cp", TARGET, "iso/init/boot.bin")
+        print("creating grub iso...")
+        sys_run("grub-mkrescue -o", ISO, "./iso")
+
+def make_clean():
+    if os.path.exists("output"):
+        sys_run("rm -r output")
+
+    if os.path.exists(TARGET):
+        sys_run("rm", TARGET)
+
+    if os.path.exists(ISO):
+        sys_run("rm", ISO)
+
+    if os.path.exists("iso/init/boot.bin"):
+        sys_run("rm iso/init/boot.bin")
+    
+    # else:
+    #     print("error: nothing to do!", file = os.sys.stderr)
+    #     exit(1)
+
+def make_run():
+    if os.path.exists(ISO):
+        sys_run("qemu-system-i386 -soundhw pcspk -cdrom", ISO, ignore = True)
+    elif os.path.exists(TARGET):
+        sys_run("qemu-system-i386 -soundhw pcspk -kernel", TARGET, ignore = True)
+    else:
+        not_found(TARGET)
+
+def make_kernel():
+    if os.path.exists(TARGET):
+        sys_run("qemu-system-i386 -soundhw pcspk -kernel", TARGET, ignore = True)
+
+if len(os.sys.argv) <= 1:
+    make_main()
+else:
+    if os.sys.argv[-1] == "clean":
+        make_clean()
+    elif os.sys.argv[-1] == "run":
+        make_run()
+    elif os.sys.argv[-1] == "kernel":
+        make_kernel()
+    else:
+        print("error: unknown option: " + os.sys.argv[-1], file = os.sys.stderr)
+        exit(1)
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN LICENSE.txt]
+MIT License
+
+Copyright (c) 2021 llamaking136
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN linker.ld]
+ENTRY (loader)
+SECTIONS
+{
+  . = 0x00100000;
+  .mbheader : {
+    *(.mbheader)
+  }
+  .text : {
+    *(.text)
+  }
+  .rodata ALIGN (0x1000) : {
+    *(.rodata)
+  }
+  .data ALIGN (0x1000) : {
+    *(.data)
+  }
+  .bss : {
+    sbss = .;
+    *(COMMON)
+    *(.bss)
+    ebss = .;
+  }
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN boot/boot.asm]
+global loader
+global stack_ptr
+
+extern kmain
+
+MODULEALIGN equ 1<<0
+MEMINFO equ 1<<1
+FLAGS equ MODULEALIGN | MEMINFO
+MAGIC equ 0x1BADB002
+CHECKSUM equ -(MAGIC + FLAGS)
+
+section .mbheader
+align 4
+MultiBootHeader:
+  dd MAGIC
+  dd FLAGS
+  dd CHECKSUM
+
+section .text
+
+STACKSIZE equ 0x4000
+
+loader:
+  mov esp, stack+STACKSIZE
+  push eax
+  push ebx
+
+  call kmain
+
+  cli
+
+hang:
+  hlt
+  jmp hang
+
+section .bss
+align 4
+stack:
+  resb STACKSIZE
+stack_ptr:
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN iso/boot/grub/grub.cfg]
+set timeout=15
+set default="0"
+
+menuentry "DANIX 0.0.1" {
+	multiboot /init/boot.bin
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/stdlib.h]
+//
+// stdlib.h
+//
+// created at 20/03/2021 12:37:33
+// written by llamaking136
+//
+
+// MIT License
+//
+// Copyright (c) 2021 llamaking136
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(STDLIB_H)
+#define STDLIB_H
+
+#include "../kernel/string.h"
+#include "../kernel/assembly.h"
+
+#endif // STDLIB_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/unistd.h]
+//
+// unistd.h
+//
+// created at 20/03/2021 12:37:33
+// written by llamaking136
+//
+
+// MIT License
+//
+// Copyright (c) 2021 llamaking136
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(UNISTD_H)
+#define UNISTD_H
+
+#include "../kernel/prog/shutdown.h"
+#include "../kernel/panic.h"
+#include "../kernel/dev/speaker/speaker.h"
+#include "sys/types.h"
+
+void usleep(uint64_t);
+void sleep(uint64_t);
+
+#endif // UNISTD_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/stdio.h]
+//
+// stdio.h
+//
+// created at 20/03/2021 12:37:33
+// written by llamaking136
+//
+
+// MIT License
+//
+// Copyright (c) 2021 llamaking136
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(STDIO_H)
+#define STDIO_H
+
+#include "../kernel/dev/video/vga.h"
+
+#endif // STDIO_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/stdarg.h]
+// yoinked this file from my GCC, i didn't make this
+
+/* Copyright (C) 1989-2020 Free Software Foundation, Inc.
+
+This file is part of GCC.
+
+GCC is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3, or (at your option)
+any later version.
+
+GCC is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Under Section 7 of GPL version 3, you are granted additional
+permissions described in the GCC Runtime Library Exception, version
+3.1, as published by the Free Software Foundation.
+
+You should have received a copy of the GNU General Public License and
+a copy of the GCC Runtime Library Exception along with this program;
+see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+<http://www.gnu.org/licenses/>.  */
+
+/*
+ * ISO C Standard:  7.15  Variable arguments  <stdarg.h>
+ */
+
+#ifndef _STDARG_H
+#ifndef _ANSI_STDARG_H_
+#ifndef __need___va_list
+#define _STDARG_H
+#define _ANSI_STDARG_H_
+#endif /* not __need___va_list */
+#undef __need___va_list
+
+/* Define __gnuc_va_list.  */
+
+#ifndef __GNUC_VA_LIST
+#define __GNUC_VA_LIST
+typedef __builtin_va_list __gnuc_va_list;
+#endif
+
+/* Define the standard macros for the user,
+   if this invocation was from the user program.  */
+#ifdef _STDARG_H
+
+#define va_start(v,l)	__builtin_va_start(v,l)
+#define va_end(v)	__builtin_va_end(v)
+#define va_arg(v,l)	__builtin_va_arg(v,l)
+#if !defined(__STRICT_ANSI__) || __STDC_VERSION__ + 0 >= 199900L \
+    || __cplusplus + 0 >= 201103L
+#define va_copy(d,s)	__builtin_va_copy(d,s)
+#endif
+#define __va_copy(d,s)	__builtin_va_copy(d,s)
+
+/* Define va_list, if desired, from __gnuc_va_list. */
+/* We deliberately do not define va_list when called from
+   stdio.h, because ANSI C says that stdio.h is not supposed to define
+   va_list.  stdio.h needs to have access to that data type, 
+   but must not use that name.  It should use the name __gnuc_va_list,
+   which is safe because it is reserved for the implementation.  */
+
+#ifdef _BSD_VA_LIST
+#undef _BSD_VA_LIST
+#endif
+
+#if defined(__svr4__) || (defined(_SCO_DS) && !defined(__VA_LIST))
+/* SVR4.2 uses _VA_LIST for an internal alias for va_list,
+   so we must avoid testing it and setting it here.
+   SVR4 uses _VA_LIST as a flag in stdarg.h, but we should
+   have no conflict with that.  */
+#ifndef _VA_LIST_
+#define _VA_LIST_
+#ifdef __i860__
+#ifndef _VA_LIST
+#define _VA_LIST va_list
+#endif
+#endif /* __i860__ */
+typedef __gnuc_va_list va_list;
+#ifdef _SCO_DS
+#define __VA_LIST
+#endif
+#endif /* _VA_LIST_ */
+#else /* not __svr4__ || _SCO_DS */
+
+/* The macro _VA_LIST_ is the same thing used by this file in Ultrix.
+   But on BSD NET2 we must not test or define or undef it.
+   (Note that the comments in NET 2's ansi.h
+   are incorrect for _VA_LIST_--see stdio.h!)  */
+#if !defined (_VA_LIST_) || defined (__BSD_NET2__) || defined (____386BSD____) || defined (__bsdi__) || defined (__sequent__) || defined (__FreeBSD__) || defined(WINNT)
+/* The macro _VA_LIST_DEFINED is used in Windows NT 3.5  */
+#ifndef _VA_LIST_DEFINED
+/* The macro _VA_LIST is used in SCO Unix 3.2.  */
+#ifndef _VA_LIST
+/* The macro _VA_LIST_T_H is used in the Bull dpx2  */
+#ifndef _VA_LIST_T_H
+/* The macro __va_list__ is used by BeOS.  */
+#ifndef __va_list__
+typedef __gnuc_va_list va_list;
+#endif /* not __va_list__ */
+#endif /* not _VA_LIST_T_H */
+#endif /* not _VA_LIST */
+#endif /* not _VA_LIST_DEFINED */
+#if !(defined (__BSD_NET2__) || defined (____386BSD____) || defined (__bsdi__) || defined (__sequent__) || defined (__FreeBSD__))
+#define _VA_LIST_
+#endif
+#ifndef _VA_LIST
+#define _VA_LIST
+#endif
+#ifndef _VA_LIST_DEFINED
+#define _VA_LIST_DEFINED
+#endif
+#ifndef _VA_LIST_T_H
+#define _VA_LIST_T_H
+#endif
+#ifndef __va_list__
+#define __va_list__
+#endif
+
+#endif /* not _VA_LIST_, except on certain systems */
+
+#endif /* not __svr4__ */
+
+#endif /* _STDARG_H */
+
+#endif /* not _ANSI_STDARG_H_ */
+#endif /* not _STDARG_H */
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/unistd.c]
+//
+// unistd.c
+//
+// created at 01/04/2021 14:05:08
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include <unistd.h>
+#include "../kernel/timer.h"
+
+void usleep(uint64_t by) {
+	uint64_t start = tick;
+	while (tick != start + by) {
+		// printf("tick: %d\r", tick);
+	}
+}
+
+void sleep(uint64_t by) {
+	// printf("sleeping...\n");
+	usleep(by * 1000);
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN include/sys/types.h]
+//
+// types.h
+//
+// created at 05/03/2021 18:21:33
+// written by Someone
+//
+
+
+#if !defined(TYPES_H)
+#define TYPES_H
+
+typedef char                     int8_t;
+typedef unsigned char           uint8_t;
+typedef short                   int16_t;
+typedef unsigned short         uint16_t;
+typedef int                     int32_t;
+typedef unsigned int           uint32_t;
+typedef long long int           int64_t;
+typedef unsigned long long int uint64_t;
+
+typedef const char*              string;
+typedef uint32_t                 size_t;
+typedef char                        hex;
+
+#endif // TYPES_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/main.h]
+//
+// main.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(MAIN_H)
+#define MAIN_H
+
+// #include "assembly.h"
+#include "dev/keyboard/keyboard.h"
+// #include "dev/vga.h"
+#include <stdio.h>
+#include "init.h"
+
+#endif // MAIN_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/common.c]
+// common.c -- Defines some global functions.
+//             From JamesM's kernel development tutorials.
+
+#include "common.h"
+
+// Copy len bytes from src to dest.
+void memcpy(u8int *dest, const u8int *src, u32int len)
+{
+    const u8int *sp = (const u8int *)src;
+    u8int *dp = (u8int *)dest;
+    for(; len != 0; len--) *dp++ = *sp++;
+}
+
+// Write len copies of val into dest.
+void memset(u8int *dest, u8int val, u32int len)
+{
+    u8int *temp = (u8int *)dest;
+    for ( ; len != 0; len--) *temp++ = val;
+}
+
+// Compare two strings. Should return -1 if 
+// str1 < str2, 0 if they are equal or 1 otherwise.
+int strcmp(char *str1, char *str2)
+{
+      int i = 0;
+      int failed = 0;
+      while(str1[i] != '\0' && str2[i] != '\0')
+      {
+          if(str1[i] != str2[i])
+          {
+              failed = 1;
+              break;
+          }
+          i++;
+      }
+      // why did the loop exit?
+      if( (str1[i] == '\0' && str2[i] != '\0') || (str1[i] != '\0' && str2[i] == '\0') )
+          failed = 1;
+  
+      return failed;
+}
+
+// Copy the NULL-terminated string src into dest, and
+// return dest.
+char *strcpy(char *dest, const char *src)
+{
+    do
+    {
+      *dest++ = *src++;
+    }
+    while (*src != 0);
+}
+
+// Concatenate the NULL-terminated string src onto
+// the end of dest, and return dest.
+char *strcat(char *dest, const char *src)
+{
+    while (*dest != 0)
+    {
+        *dest = *dest++;
+    }
+
+    do
+    {
+        *dest++ = *src++;
+    }
+    while (*src != 0);
+    return dest;
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/descriptor_tables.c]
+//
+// descriptor_tables.c - Initialises the GDT and IDT, and defines the 
+//                       default ISR and IRQ handler.
+//                       Based on code from Bran's kernel development tutorials.
+//                       Rewritten for JamesM's kernel development tutorials.
+//
+
+#include "common.h"
+#include "descriptor_tables.h"
+#include "isr.h"
+
+// Lets us access our ASM functions from our C code.
+extern void gdt_flush(u32int);
+extern void idt_flush(u32int);
+
+// Internal function prototypes.
+static void init_gdt();
+static void init_idt();
+static void gdt_set_gate(s32int,u32int,u32int,u8int,u8int);
+static void idt_set_gate(u8int,u32int,u16int,u8int);
+
+gdt_entry_t gdt_entries[5];
+gdt_ptr_t   gdt_ptr;
+idt_entry_t idt_entries[256];
+idt_ptr_t   idt_ptr;
+
+// Extern the ISR handler array so we can nullify them on startup.
+extern isr_t interrupt_handlers[];
+
+// Initialisation routine - zeroes all the interrupt service routines,
+// initialises the GDT and IDT.
+void init_descriptor_tables()
+{
+
+    // Initialise the global descriptor table.
+    init_gdt();
+    // Initialise the interrupt descriptor table.
+    init_idt();
+    // Nullify all the interrupt handlers.
+    memset(&interrupt_handlers, 0, sizeof(isr_t)*256);
+}
+
+static void init_gdt()
+{
+    gdt_ptr.limit = (sizeof(gdt_entry_t) * 5) - 1;
+    gdt_ptr.base  = (u32int)&gdt_entries;
+
+    gdt_set_gate(0, 0, 0, 0, 0);                // Null segment
+    gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // Code segment
+    gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF); // Data segment
+    gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // User mode code segment
+    gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // User mode data segment
+
+    gdt_flush((u32int)&gdt_ptr);
+}
+
+// Set the value of one GDT entry.
+static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int access, u8int gran)
+{
+    gdt_entries[num].base_low    = (base & 0xFFFF);
+    gdt_entries[num].base_middle = (base >> 16) & 0xFF;
+    gdt_entries[num].base_high   = (base >> 24) & 0xFF;
+
+    gdt_entries[num].limit_low   = (limit & 0xFFFF);
+    gdt_entries[num].granularity = (limit >> 16) & 0x0F;
+    
+    gdt_entries[num].granularity |= gran & 0xF0;
+    gdt_entries[num].access      = access;
+}
+
+static void init_idt()
+{
+    idt_ptr.limit = sizeof(idt_entry_t) * 256 -1;
+    idt_ptr.base  = (u32int)&idt_entries;
+
+    memset(&idt_entries, 0, sizeof(idt_entry_t)*256);
+
+    // Remap the irq table.
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0x0);
+    outb(0xA1, 0x0);
+
+    idt_set_gate( 0, (u32int)isr0 , 0x08, 0x8E);
+    idt_set_gate( 1, (u32int)isr1 , 0x08, 0x8E);
+    idt_set_gate( 2, (u32int)isr2 , 0x08, 0x8E);
+    idt_set_gate( 3, (u32int)isr3 , 0x08, 0x8E);
+    idt_set_gate( 4, (u32int)isr4 , 0x08, 0x8E);
+    idt_set_gate( 5, (u32int)isr5 , 0x08, 0x8E);
+    idt_set_gate( 6, (u32int)isr6 , 0x08, 0x8E);
+    idt_set_gate( 7, (u32int)isr7 , 0x08, 0x8E);
+    idt_set_gate( 8, (u32int)isr8 , 0x08, 0x8E);
+    idt_set_gate( 9, (u32int)isr9 , 0x08, 0x8E);
+    idt_set_gate(10, (u32int)isr10, 0x08, 0x8E);
+    idt_set_gate(11, (u32int)isr11, 0x08, 0x8E);
+    idt_set_gate(12, (u32int)isr12, 0x08, 0x8E);
+    idt_set_gate(13, (u32int)isr13, 0x08, 0x8E);
+    idt_set_gate(14, (u32int)isr14, 0x08, 0x8E);
+    idt_set_gate(15, (u32int)isr15, 0x08, 0x8E);
+    idt_set_gate(16, (u32int)isr16, 0x08, 0x8E);
+    idt_set_gate(17, (u32int)isr17, 0x08, 0x8E);
+    idt_set_gate(18, (u32int)isr18, 0x08, 0x8E);
+    idt_set_gate(19, (u32int)isr19, 0x08, 0x8E);
+    idt_set_gate(20, (u32int)isr20, 0x08, 0x8E);
+    idt_set_gate(21, (u32int)isr21, 0x08, 0x8E);
+    idt_set_gate(22, (u32int)isr22, 0x08, 0x8E);
+    idt_set_gate(23, (u32int)isr23, 0x08, 0x8E);
+    idt_set_gate(24, (u32int)isr24, 0x08, 0x8E);
+    idt_set_gate(25, (u32int)isr25, 0x08, 0x8E);
+    idt_set_gate(26, (u32int)isr26, 0x08, 0x8E);
+    idt_set_gate(27, (u32int)isr27, 0x08, 0x8E);
+    idt_set_gate(28, (u32int)isr28, 0x08, 0x8E);
+    idt_set_gate(29, (u32int)isr29, 0x08, 0x8E);
+    idt_set_gate(30, (u32int)isr30, 0x08, 0x8E);
+    idt_set_gate(31, (u32int)isr31, 0x08, 0x8E);
+    idt_set_gate(32, (u32int)irq0, 0x08, 0x8E);
+    idt_set_gate(33, (u32int)irq1, 0x08, 0x8E);
+    idt_set_gate(34, (u32int)irq2, 0x08, 0x8E);
+    idt_set_gate(35, (u32int)irq3, 0x08, 0x8E);
+    idt_set_gate(36, (u32int)irq4, 0x08, 0x8E);
+    idt_set_gate(37, (u32int)irq5, 0x08, 0x8E);
+    idt_set_gate(38, (u32int)irq6, 0x08, 0x8E);
+    idt_set_gate(39, (u32int)irq7, 0x08, 0x8E);
+    idt_set_gate(40, (u32int)irq8, 0x08, 0x8E);
+    idt_set_gate(41, (u32int)irq9, 0x08, 0x8E);
+    idt_set_gate(42, (u32int)irq10, 0x08, 0x8E);
+    idt_set_gate(43, (u32int)irq11, 0x08, 0x8E);
+    idt_set_gate(44, (u32int)irq12, 0x08, 0x8E);
+    idt_set_gate(45, (u32int)irq13, 0x08, 0x8E);
+    idt_set_gate(46, (u32int)irq14, 0x08, 0x8E);
+    idt_set_gate(47, (u32int)irq15, 0x08, 0x8E);
+
+    idt_flush((u32int)&idt_ptr);
+}
+
+static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
+{
+    idt_entries[num].base_lo = base & 0xFFFF;
+    idt_entries[num].base_hi = (base >> 16) & 0xFFFF;
+
+    idt_entries[num].sel     = sel;
+    idt_entries[num].always0 = 0;
+    // We must uncomment the OR below when we get to using user-mode.
+    // It sets the interrupt gate's privilege level to 3.
+    idt_entries[num].flags   = flags /* | 0x60 */;
+}
+
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/timer.c]
+// timer.c -- Initialises the PIT, and handles clock updates.
+//            Written for JamesM's kernel development tutorials.
+
+#include "timer.h"
+#include "isr.h"
+#include <stdio.h>
+
+uint64_t tick = 0;
+
+static void timer_callback(registers_t regs)
+{
+    tick++;
+	// printf("Tick: %d\r", tick / 1000);
+}
+
+void init_timer(u32int frequency)
+{
+    // Firstly, register our timer callback.
+    register_interrupt_handler(IRQ0, &timer_callback, "timer");
+
+    // The value we send to the PIT is the value to divide it's input clock
+    // (1193180 Hz) by, to get our required frequency. Important to note is
+    // that the divisor must be small enough to fit into 16-bits.
+    u32int divisor = 1193180 / frequency;
+
+    // Send the command byte.
+    outb(0x43, 0x36);
+
+    // Divisor has to be sent byte-wise, so split here into upper/lower bytes.
+    u8int l = (u8int)(divisor & 0xFF);
+    u8int h = (u8int)( (divisor>>8) & 0xFF );
+
+    // Send the frequency divisor.
+    outb(0x40, l);
+    outb(0x40, h);
+}
+
+uint64_t millis() {
+	return tick;
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/version.h]
+//
+// version.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(VERSION_H)
+#define VERSION_H
+
+#define VERSION "0.0.2"
+// #define BEEP
+
+#endif // VERSION_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/assembly.h]
+//
+// assembly.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(ASSEMBLY_H)
+#define ASSEMBLY_H
+
+#include <sys/types.h>
+
+uint8_t inb(uint16_t);
+uint32_t inl(uint16_t);
+uint16_t inw(uint16_t);
+void outb(uint16_t, uint8_t);
+void outl(uint16_t, uint32_t);
+void outw(uint16_t, uint16_t);
+void sti();
+
+#endif // ASSEMBLY_HPP
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/init.c]
+//
+// init.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "init.h"
+
+void kinit() {
+	clear();
+	printf("[ LOG ]: re-enabling interrupts...\n");
+	asm volatile("sti");
+	printf("[ LOG ]: initalizing descriptor_tables...\n");
+	init_descriptor_tables();
+	printf("[ LOG ]: initalizing timer to %d Hz...\n", 1000);
+	init_timer(1000);
+	printf("[ LOG ]: initalizing keyboard...\n");
+	init_keyboard();
+	printf("[ LOG ]: initalizing speaker...\n");
+	init_speaker();
+	printf("[ LOG ]: done initalizing all!\n");
+	printf("DANIX, version %s\n", VERSION);
+#if defined(BEEP)
+	victory_beep();
+#endif // BEEP
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/isr.c]
+//
+// isr.c -- High level interrupt service routines and interrupt request handlers.
+//		    Part of this code is modified from Bran's kernel development tutorials.
+//		    Rewritten for JamesM's kernel development tutorials.
+//
+
+#include "common.h"
+#include <sys/types.h>
+#include "isr.h"
+#include <stdio.h>
+
+isr_t interrupt_handlers[256];
+
+void register_interrupt_handler(u8int n, isr_t handler, string name) {
+	// printf("[ LOG ]: a new handler (%s, %d) has been issued\n", name, n);
+	interrupt_handlers[n] = handler;
+	if (interrupt_handlers[n]) {
+		//  printf("[ LOG ]: handler (%s, %d) has been issued and added\n", name, n);
+	} else {
+		panic("handler (%s, %d) was issued, but not added\n", name, n);
+	}
+}
+
+// This gets called from our ASM interrupt handler stub.
+void isr_handler(registers_t regs)
+{
+	if (regs.int_no == SYSCALL_KERN_INT) {
+		printf("recieved system call interrupt\n");
+	} else {
+	 	printf("recieved interrupt: %d\r", regs.int_no);
+	}
+
+	if (interrupt_handlers[regs.int_no] != 0) {
+        isr_t handler = interrupt_handlers[regs.int_no];
+        handler(regs);
+    }
+}
+
+// This gets called from our ASM interrupt handler stub.
+void irq_handler(registers_t regs)
+{
+	// Send an EOI (end of interrupt) signal to the PICs.
+	// If this interrupt involved the slave.
+	if (regs.int_no >= 40)
+	{
+		// Send reset signal to slave.
+		outb(0xA0, 0x20);
+	}
+	// Send reset signal to master. (As well as slave, if necessary).
+	outb(0x20, 0x20);
+
+	if (interrupt_handlers[regs.int_no] != 0)
+	{
+		isr_t handler = interrupt_handlers[regs.int_no];
+		handler(regs);
+	}
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/panic.c]
+//
+// panic.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "panic.h"
+
+void panic(string str, ...) {
+	// printc(str, f_white);
+	
+#if defined(BEEP)
+	speaker_play(1230);
+#endif // BEEP
+
+	asm volatile("cli");
+
+	uint32_t i;
+	char* s;
+	
+	colors current_color = f_white;
+
+	va_list arg;
+	va_start(arg, str);
+
+	colors reset_color = f_white;
+
+	printf("\33RKERNEL PANIC\33r: ");
+
+	while (*str) {
+		if (*str == '%') { // formating chars
+			str++;
+			switch (*str) {
+				case 'c':
+					i = va_arg(arg, int);
+					putc(i, current_color);
+					break;
+				case 'd':
+					i = va_arg(arg, int);
+					if (i < 0) {
+						i = -i;
+						putc('-', current_color);
+					}
+					printc(strconv(i, 10), current_color);
+					break;
+				case 's':
+					s = va_arg(arg, char*);
+					printc(s, current_color);
+					break;
+				case 'x':
+					i = va_arg(arg, uint32_t);
+					printc("0x", current_color);
+					printc(strconv(i, 16), current_color);
+					break;
+				case 'o':
+					i = va_arg(arg, uint32_t);
+					printc(strconv(i, 8), current_color);
+					break;
+				defualt:
+					putc('%', current_color);
+			}
+		} else if (*str == '\33') { // colors
+			*str++;
+			switch (*str) {
+				case 'W':
+					current_color = f_white;
+					break;
+				case 'R':
+					current_color = f_red;
+					break;
+				case 'G':
+					current_color = f_green;
+					break;
+				case 'B':
+					current_color = f_blue;
+					break;
+				case 'r':
+					current_color = reset_color;
+					break;
+				default:
+					break;
+			}
+		} else { // basic chars
+			putc(*str, current_color);
+		}
+		str++;
+	}
+	for (;;);
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/string.c]
+//
+// string.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "string.h"
+
+char* strconv(uint32_t num, int base) {
+	/*
+	static char repr[] = "0123456789ABCDEF";
+	static char buff[50];
+	char* ptr = &buff[49];
+	*ptr = '\0';
+	do {
+		*ptr-- = repr[num % base];
+		num /= base;
+	} while (num != 0);
+	return ptr;
+	*/
+	static char Representation[] = "0123456789ABCDEF";
+    static char buffer[50];
+    char *ptr;
+
+    ptr = &buffer[49];
+    *ptr = '\0';
+
+    do
+    {
+        *--ptr = Representation[num % base];
+        num /= base;
+    } while (num != 0);
+    return (ptr);
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/timer.h]
+// timer.h -- Defines the interface for all PIT-related functions.
+//            Written for JamesM's kernel development tutorials.
+
+#ifndef TIMER_H
+#define TIMER_H
+
+#include "common.h"
+#include <sys/types.h>
+
+extern uint64_t tick;
+
+void init_timer(u32int frequency);
+uint64_t millis();
+
+#endif
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/descriptor_tables.h]
+// 
+// descriptor_tables.h - Defines the interface for initialising the GDT and IDT.
+//                       Also defines needed structures.
+//                       Based on code from Bran's kernel development tutorials.
+//                       Rewritten for JamesM's kernel development tutorials.
+//
+
+#include "common.h"
+
+// Initialisation function is publicly accessible.
+void init_descriptor_tables();
+
+
+// This structure contains the value of one GDT entry.
+// We use the attribute 'packed' to tell GCC not to change
+// any of the alignment in the structure.
+struct gdt_entry_struct
+{
+    u16int limit_low;           // The lower 16 bits of the limit.
+    u16int base_low;            // The lower 16 bits of the base.
+    u8int  base_middle;         // The next 8 bits of the base.
+    u8int  access;              // Access flags, determine what ring this segment can be used in.
+    u8int  granularity;
+    u8int  base_high;           // The last 8 bits of the base.
+} __attribute__((packed));
+
+typedef struct gdt_entry_struct gdt_entry_t;
+
+// This struct describes a GDT pointer. It points to the start of
+// our array of GDT entries, and is in the format required by the
+// lgdt instruction.
+struct gdt_ptr_struct
+{
+    u16int limit;               // The upper 16 bits of all selector limits.
+    u32int base;                // The address of the first gdt_entry_t struct.
+} __attribute__((packed));
+
+typedef struct gdt_ptr_struct gdt_ptr_t;
+
+// A struct describing an interrupt gate.
+struct idt_entry_struct
+{
+    u16int base_lo;             // The lower 16 bits of the address to jump to when this interrupt fires.
+    u16int sel;                 // Kernel segment selector.
+    u8int  always0;             // This must always be zero.
+    u8int  flags;               // More flags. See documentation.
+    u16int base_hi;             // The upper 16 bits of the address to jump to.
+} __attribute__((packed));
+
+typedef struct idt_entry_struct idt_entry_t;
+
+// A struct describing a pointer to an array of interrupt handlers.
+// This is in a format suitable for giving to 'lidt'.
+struct idt_ptr_struct
+{
+    u16int limit;
+    u32int base;                // The address of the first element in our idt_entry_t array.
+} __attribute__((packed));
+
+typedef struct idt_ptr_struct idt_ptr_t;
+
+// These extern directives let us access the addresses of our ASM ISR handlers.
+extern void isr0 ();
+extern void isr1 ();
+extern void isr2 ();
+extern void isr3 ();
+extern void isr4 ();
+extern void isr5 ();
+extern void isr6 ();
+extern void isr7 ();
+extern void isr8 ();
+extern void isr9 ();
+extern void isr10();
+extern void isr11();
+extern void isr12();
+extern void isr13();
+extern void isr14();
+extern void isr15();
+extern void isr16();
+extern void isr17();
+extern void isr18();
+extern void isr19();
+extern void isr20();
+extern void isr21();
+extern void isr22();
+extern void isr23();
+extern void isr24();
+extern void isr25();
+extern void isr26();
+extern void isr27();
+extern void isr28();
+extern void isr29();
+extern void isr30();
+extern void isr31();
+extern void irq0 ();
+extern void irq1 ();
+extern void irq2 ();
+extern void irq3 ();
+extern void irq4 ();
+extern void irq5 ();
+extern void irq6 ();
+extern void irq7 ();
+extern void irq8 ();
+extern void irq9 ();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
+
+
+
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/common.h]
+// common.h -- Defines typedefs and some global functions.
+//             From JamesM's kernel development tutorials.
+
+#ifndef COMMON_H
+#define COMMON_H
+
+// Some nice typedefs, to standardise sizes across platforms.
+// These typedefs are written for 32-bit X86.
+typedef unsigned int   u32int;
+typedef          int   s32int;
+typedef unsigned short u16int;
+typedef          short s16int;
+typedef unsigned char  u8int;
+typedef          char  s8int;
+
+void memcpy(u8int *dest, const u8int *src, u32int len);
+void memset(u8int *dest, u8int val, u32int len);
+int strcmp(char *str1, char *str2);
+char *strcpy(char *dest, const char *src);
+char *strcat(char *dest, const char *src);
+
+#endif // COMMON_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/main.c]
+//
+// main.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "main.h"
+
+void kmain() {
+	kinit();
+	
+	while (1) getch(); // print all characters typed
+	
+	for (;;); // infinite loop for all eternity
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/interrupt.s]
+;
+; interrupt.s -- Contains interrupt service routine wrappers.
+;                Based on Bran's kernel development tutorials.
+;                Rewritten for JamesM's kernel development tutorials.
+
+; This macro creates a stub for an ISR which does NOT pass it's own
+; error code (adds a dummy errcode byte).
+%macro ISR_NOERRCODE 1
+  global isr%1
+  isr%1:
+    cli                         ; Disable interrupts firstly.
+    push byte 0                 ; Push a dummy error code.
+    push byte %1                ; Push the interrupt number.
+    jmp isr_common_stub         ; Go to our common handler code.
+%endmacro
+
+; This macro creates a stub for an ISR which passes it's own
+; error code.
+%macro ISR_ERRCODE 1
+  global isr%1
+  isr%1:
+    cli                         ; Disable interrupts.
+    push byte %1                ; Push the interrupt number
+    jmp isr_common_stub
+%endmacro
+
+; This macro creates a stub for an IRQ - the first parameter is
+; the IRQ number, the second is the ISR number it is remapped to.
+%macro IRQ 2
+  global irq%1
+  irq%1:
+    cli
+    push byte 0
+    push byte %2
+    jmp irq_common_stub
+%endmacro
+        
+ISR_NOERRCODE 0
+ISR_NOERRCODE 1
+ISR_NOERRCODE 2
+ISR_NOERRCODE 3
+ISR_NOERRCODE 4
+ISR_NOERRCODE 5
+ISR_NOERRCODE 6
+ISR_NOERRCODE 7
+ISR_ERRCODE   8
+ISR_NOERRCODE 9
+ISR_ERRCODE   10
+ISR_ERRCODE   11
+ISR_ERRCODE   12
+ISR_ERRCODE   13
+ISR_ERRCODE   14
+ISR_NOERRCODE 15
+ISR_NOERRCODE 16
+ISR_NOERRCODE 17
+ISR_NOERRCODE 18
+ISR_NOERRCODE 19
+ISR_NOERRCODE 20
+ISR_NOERRCODE 21
+ISR_NOERRCODE 22
+ISR_NOERRCODE 23
+ISR_NOERRCODE 24
+ISR_NOERRCODE 25
+ISR_NOERRCODE 26
+ISR_NOERRCODE 27
+ISR_NOERRCODE 28
+ISR_NOERRCODE 29
+ISR_NOERRCODE 30
+ISR_NOERRCODE 31
+IRQ   0,    32
+IRQ   1,    33
+IRQ   2,    34
+IRQ   3,    35
+IRQ   4,    36
+IRQ   5,    37
+IRQ   6,    38
+IRQ   7,    39
+IRQ   8,    40
+IRQ   9,    41
+IRQ  10,    42
+IRQ  11,    43
+IRQ  12,    44
+IRQ  13,    45
+IRQ  14,    46
+IRQ  15,    47
+
+; In isr.c
+extern isr_handler
+
+; This is our common ISR stub. It saves the processor state, sets
+; up for kernel mode segments, calls the C-level fault handler,
+; and finally restores the stack frame.
+isr_common_stub:
+    pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+
+    mov ax, ds               ; Lower 16-bits of eax = ds.
+    push eax                 ; save the data segment descriptor
+
+    mov ax, 0x10  ; load the kernel data segment descriptor
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    call isr_handler
+
+    pop ebx        ; reload the original data segment descriptor
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
+
+    popa                     ; Pops edi,esi,ebp...
+    add esp, 8     ; Cleans up the pushed error code and pushed ISR number
+    sti
+    iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
+
+; In isr.c
+extern irq_handler
+
+; This is our common IRQ stub. It saves the processor state, sets
+; up for kernel mode segments, calls the C-level fault handler,
+; and finally restores the stack frame.
+irq_common_stub:
+    pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
+
+    mov ax, ds               ; Lower 16-bits of eax = ds.
+    push eax                 ; save the data segment descriptor
+
+    mov ax, 0x10  ; load the kernel data segment descriptor
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    call irq_handler
+
+    pop ebx        ; reload the original data segment descriptor
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
+
+    popa                     ; Pops edi,esi,ebp...
+    add esp, 8     ; Cleans up the pushed error code and pushed ISR number
+    sti
+    iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
+
+
+        
+
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/assembly.c]
+//
+// assembly.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "assembly.h"
+
+uint8_t inb(uint16_t port) {
+	uint8_t r;
+	asm volatile("inb %1, %0"
+        : "=a"(r)
+        : "Nd"(port));
+	return r;
+}
+
+uint32_t inl(uint16_t port) {
+	uint32_t ret;
+    asm volatile("in %%dx,%%eax"
+        : "=a"(ret)
+        : "d"(port));
+    return ret;
+}
+
+uint16_t inw(uint16_t port) {
+	uint16_t ret;
+	asm volatile("inw %1, %0" 
+		: "=a" (ret) 
+		: "dN" (port));
+	return ret;
+}
+
+void outb(uint16_t port, uint8_t value) {
+	asm volatile("outb %0, %1"
+        :
+        : "a"(value), "Nd"(port)
+        :);
+}
+
+void outl(uint16_t port, uint32_t value) {
+	asm volatile("out %%eax,%%dx" 
+		:
+		: "a"(value), "d"(port));	
+}
+
+void outw(uint16_t port, uint16_t value) {
+	asm volatile("outw %%ax,%%dx"
+        :
+        : "dN"(port), "a"(value));	
+}
+
+void sti() {
+	asm volatile("sti");
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/panic.h]
+//
+// panic.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(PANIC_H)
+#define PANIC_H
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <sys/types.h>
+#include "dev/speaker/speaker.h"
+#include "version.h"
+
+void panic(string, ...);
+
+#endif // PANIC_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/isr.h]
+//
+// isr.h -- Interface and structures for high level interrupt service routines.
+//          Part of this code is modified from Bran's kernel development tutorials.
+//          Rewritten for JamesM's kernel development tutorials.
+//
+
+#include "common.h"
+#include <sys/types.h>
+#include "panic.h"
+#include "assembly.h"
+
+#define SYSCALL_KERN_INT 0x80
+
+#define IRQ0 32
+#define IRQ1 33
+#define IRQ2 34
+#define IRQ3 35
+#define IRQ4 36
+#define IRQ5 37
+#define IRQ6 38
+#define IRQ7 39
+#define IRQ8 40
+#define IRQ9 41
+#define IRQ10 42
+#define IRQ11 43
+#define IRQ12 44
+#define IRQ13 45
+#define IRQ14 46
+#define IRQ15 47
+
+typedef struct registers
+{
+    u32int ds;                  // Data segment selector
+    u32int edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
+    u32int int_no, err_code;    // Interrupt number and error code (if applicable)
+    u32int eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
+} registers_t;
+
+// Enables registration of callbacks for interrupts or IRQs.
+// For IRQs, to ease confusion, use the #defines above as the
+// first parameter.
+typedef void (*isr_t)(registers_t);
+void register_interrupt_handler(u8int n, isr_t handler, string name);
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/gdt.s]
+;
+; Gdt.s -- contains global descriptor table and interrupt descriptor table
+;          setup code.
+;          Based on code from Bran's kernel development tutorials.
+;          Rewritten for JamesM's kernel development tutorials.
+
+[GLOBAL gdt_flush]    ; Allows the C code to call gdt_flush().
+
+gdt_flush:
+    mov eax, [esp+4]  ; Get the pointer to the GDT, passed as a parameter.
+    lgdt [eax]        ; Load the new GDT pointer
+
+    mov ax, 0x10      ; 0x10 is the offset in the GDT to our data segment
+    mov ds, ax        ; Load all data segment selectors
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    jmp 0x08:.flush   ; 0x08 is the offset to our code segment: Far jump!
+.flush:
+    ret
+
+[GLOBAL idt_flush]    ; Allows the C code to call idt_flush().
+
+idt_flush:
+    mov eax, [esp+4]  ; Get the pointer to the IDT, passed as a parameter. 
+    lidt [eax]        ; Load the IDT pointer.
+    ret
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/init.h]
+//
+// init.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(INIT_H)
+#define INIT_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "descriptor_tables.h"
+#include "version.h"
+#include "timer.h"
+#include "dev/keyboard/keyboard.h"
+// #include "dev/speaker/speaker.h"
+
+void kinit();
+
+#endif // INIT_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/string.h]
+//
+// string.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(STRING_H)
+#define STRING_H
+
+#include <sys/types.h>
+
+char* strconv(uint32_t, int);
+
+#endif // STRING_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/prog/shutdown.h]
+//
+// shutdown.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(SHUTDOWN_H)
+#define SHUTDOWN_H
+
+#include "../assembly.h"
+#include <stdio.h>
+
+void shutdown();
+
+#endif // SHUTDOWN_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/prog/shutdown.c]
+//
+// shutdown.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "shutdown.h"
+
+void shutdown() {
+	printf("[ LOG ]: SHUTTING DOWN NOW!\n");
+	outw(0x604, 0x2000);
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/video/vga.h]
+//
+// vga.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(VGA_H)
+#define VGA_H
+
+#include <stdarg.h>
+
+#include <sys/types.h>
+#include <stdlib.h>
+
+#include "../speaker/speaker.h"
+
+#define COLUMNS_IN_LINE 80
+#define BYTES_FOR_EACH_ELEMENT 2
+#define SCREENSIZE BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE * LINES
+#define LINES 25
+
+typedef enum colors {
+	f_black,
+	f_blue,
+	f_green,
+	f_cyan,
+	f_red,
+	f_magenta,
+	f_brown,
+	f_lgrey,
+	f_dgrey,
+	f_lblue,
+	f_lgreen,
+	f_lcyan,
+	f_lred,
+	f_lmagents,
+	f_yellow,
+	f_white
+} colors;
+
+extern uint16_t pos_x;
+extern uint16_t pos_y;
+extern uint16_t* vidmem;
+
+void putchar(int8_t, colors, uint16_t, uint16_t);
+void putc(int8_t, colors);
+void printc(string, colors);
+// void printl();
+void printf(string, ...);
+void clear();
+void putpixel(int, int, uint8_t);
+void movecursor();
+void screen_scroll_check();
+char* readf();
+
+#endif // VGA_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/video/vga.c]
+//
+// vga.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//	 
+// Copyright (c) 2021 llamaking136
+//	 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//	 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//	 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "vga.h"
+
+uint16_t pos_x = 0;
+uint16_t pos_y = 0;
+
+uint16_t* vidmem = (uint16_t*)0xb8000;
+
+void putchar(int8_t chr, colors col, uint16_t x, uint16_t y) {
+	uint8_t attributeByte = (0 << 4) | (col & 0x0f);
+	uint16_t attribute = attributeByte << 8;
+	uint16_t *location;
+	location = vidmem + (y*80 + x);
+	*location = chr | attribute;
+}
+
+void putc(int8_t chr, colors col) {
+	// screen_scroll_check(current_loc);
+	// if (chr == '\n') {
+	// 	printl();
+	// 	// movecursor(current_loc);
+	// 	return;
+	// }
+	// vidmem[(pos_y * 80 + pos_x) * 2] = chr;
+	// vidmem[current_loc++] = col;
+	// movecursor(amnt_chars++);
+
+	if (pos_x >= 80) {
+		pos_x = 0;
+		pos_y ++;
+	}
+
+	if (chr == 0x08 && pos_x) {
+		pos_x--;
+	} else if (chr == 0x09) {
+		pos_x = (pos_x+8) & ~(8-1);
+	} else if (chr == '\r') {
+		pos_x = 0;
+	} else if (chr == '\n') {
+		pos_x = 0;
+		pos_y++;
+	} else if (chr == '\b') {
+		if (pos_x <= 0) {
+			// goto pos_y_bell_beep;
+			pos_y--;
+		}
+pos_y_bell_beep:
+		if (pos_y <= 0) {
+#if defined(BEEP)
+			bell_beep();
+#endif // BEEP
+		}
+		goto pos_y_bell_beep_done;
+pos_y_bell_beep_done:
+		// pos_x <= 0 ? (pos_y <= 0 ? bell_beep() : pos_y--) : pos_x--;
+		// location = vidmem + (pos_y*80 + pos_x - 1);
+		// *location = ' ' | attribute;
+		putchar(' ', col, pos_x--, pos_y);
+	} else if (chr >= ' ') {
+		// location = vidmem + (pos_y*80 + pos_x);
+		// *location = chr | attribute;
+		putchar(chr, col, pos_x++, pos_y);
+	}
+
+
+	screen_scroll_check();
+	movecursor();
+}
+
+void printc(const string str, colors col) {
+	for (uint32_t i = 0; str[i] != '\0'; i++) { 
+		/*
+		if (str[i] == '\n') {   
+			printl();
+			break;
+		}  
+		vidmem[current_loc++] = str[i++];
+		vidmem[current_loc++] = col;
+		*/
+		putc(str[i], col);
+	}	
+}
+
+/*
+void printl() {
+	uint32_t line_size = BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE;
+	current_loc += (line_size - current_loc % (line_size));
+	amnt_chars += (line_size - current_loc % (line_size)) / 2;
+}
+*/
+
+void screen_scroll_check() {
+	// if (position > SCREENSIZE / 2) {
+	// 	// will use memcpy when i can figure out how to implement it..
+	// 	clear();
+	// }
+	uint8_t attributeByte = (0 << 4) | (15 & 0x0f);
+	uint16_t blank = 0x20 | (attributeByte << 8);
+
+	if (pos_y >= 25) {
+		int i;
+		for (i = 0*80; i < 24*80; i++) {
+			vidmem[i] = vidmem[i+80];
+		}
+
+		for (i = 24*80; i < 25*80; i++) {
+			vidmem[i] = blank;
+		}
+		pos_y = 24;
+	}	
+}
+
+void printf(string str, ...) {
+	// printc(str, f_white);
+	uint32_t i;
+	char* s;
+	
+	colors current_color = f_white;
+
+	va_list arg;
+	va_start(arg, str);
+
+	colors reset_color = f_white;
+
+	while (*str) {
+		if (*str == '%') { // formating chars
+			str++;
+			switch (*str) {
+				case 'c':
+					i = va_arg(arg, int);
+					putc(i, current_color);
+					break;
+				case 'd':
+					i = va_arg(arg, int);
+					if (i < 0) {
+						i = -i;
+						putc('-', current_color);
+					}
+					printc(strconv(i, 10), current_color);
+					break;
+				case 's':
+					s = va_arg(arg, char*);
+					printc(s, current_color);
+					break;
+				case 'x':
+					i = va_arg(arg, uint32_t);
+					printc("0x", current_color);
+					printc(strconv(i, 16), current_color);
+					break;
+				case 'o':
+					i = va_arg(arg, uint32_t);
+					printc(strconv(i, 8), current_color);
+					break;
+				defualt:
+					putc('%', current_color);
+			}
+		} else if (*str == '\33') { // colors
+			*str++;
+			switch (*str) {
+				case 'W':
+					current_color = f_white;
+					break;
+				case 'R':
+					current_color = f_red;
+					break;
+				case 'G':
+					current_color = f_green;
+					break;
+				case 'B':
+					current_color = f_blue;
+					break;
+				case 'r':
+					current_color = reset_color;
+					break;
+				default:
+					break;
+			}
+		} else { // basic chars
+			putc(*str, current_color);
+		}
+		str++;
+	}
+}
+
+void clear() {
+	for (uint32_t i = 0; i < SCREENSIZE; i++) {
+		vidmem[i++] = ' ';
+		vidmem[i] = f_white;
+	}
+	pos_x = 0;
+	pos_y = 0;
+}
+
+void putpixel(int x, int y, uint8_t col) {
+	/*
+	uint8_t* VGA = (uint8_t*)0xA0000000L;
+	unsigned short offset = 320*y + x;
+	VGA[offset] = col;
+	*/
+	uint8_t* location = (uint8_t*)0xa0000 + 320 * x + y;
+	*location = col;
+}
+
+void movecursor() {
+	uint16_t cursorLocation = pos_y * 80 + pos_x;
+	outb(0x3D4, 14);
+	outb(0x3D5, cursorLocation >> 8);
+	outb(0x3D4, 15);
+	outb(0x3D5, cursorLocation);
+	/*
+	outb(0x3d4, 14);
+	outb(0x3d5, (where >> 8) & 0xff);
+	outb(0x3d4, 15);
+	outb(0x3d5, where & 0xff);
+	*/
+}
+
+char* readf() {} // blank for now
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/speaker/speaker.c]
+//
+// speaker.c
+//
+// created at 01/04/2021 14:48:20
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "speaker.h"
+
+void init_speaker() {
+	outb(0x61, inb(0x61) | 0x1);
+}
+
+void speaker_play(uint32_t hz) {
+	uint32_t Div;
+ 	uint8_t tmp;
+
+ 	Div = 1193180 / hz;
+ 	outb(0x43, 0xb6);
+ 	outb(0x42, (uint8_t) (Div) );
+ 	outb(0x42, (uint8_t) (Div >> 8));
+
+ 	tmp = inb(0x61);
+  	if (tmp != (tmp | 3)) {
+ 		outb(0x61, tmp | 3);
+ 	}
+}
+
+void speaker_stop() {
+	uint8_t tmp = inb(0x61) & 0xFC;
+ 	outb(0x61, tmp);
+}
+
+void speaker_beep(uint32_t hz, uint64_t len) {
+	speaker_play(hz);
+	usleep(len);
+	speaker_stop();
+}
+
+void victory_beep() {
+	speaker_beep(600, 500);
+}
+
+void bell_beep() {
+	// speaker_beep(600, 60);
+	speaker_beep(1100, 60);
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/speaker/speaker.h]
+//
+// speaker.h
+//
+// created at 01/04/2021 14:48:20
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(SPEAKER_H)
+#define SPEAKER_H
+
+#include <unistd.h>
+
+void init_speaker();
+void speaker_play(uint32_t);
+void speaker_stop();
+void speaker_beep(uint32_t, uint64_t);
+void victory_beep();
+void bell_beep();
+
+#endif // SPEAKER_H
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/keyboard/keyboard.c]
+//
+// keyboard.c
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#include "keyboard.h"
+
+uint8_t current_char = '\0';
+
+uint8_t keyboard_map[128] = {
+    0, 27, '1', '2', '3', '4', '5', '6', '7', '8',
+    '9', '0', '-', '=', '\b',
+    '\t',
+    'q', 'w', 'e', 'r',
+    't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
+    0,
+    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
+    '\'', '`', 0,
+    '\\', 'z', 'x', 'c', 'v', 'b', 'n',
+    'm', ',', '.', '/', 0,
+    '*',
+    0,
+    ' ',
+    0,
+    0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    '-',
+    0,
+    0,
+    0,
+    '+',
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, 0, 0,
+    0,
+    0,
+    0
+};
+
+// uint32_t current_location = 0;
+
+/*
+void getch() {
+	uint8_t keycode = inb(0x60);
+
+	if (keyboard_map[(unsigned char)keycode] != 0) {
+		putc(keyboard_map[(unsigned char)keycode]);
+	} else {
+		return;
+	}
+
+	outb(0x20, 0x20);
+}
+*/
+
+void init_keyboard() {
+	// keyboard_enable();
+	register_interrupt_handler(IRQ1, keyboard_handler, "keyboard");
+}
+
+void keyboard_enable() {
+	outb(0x61, inb(0x61) & 0x7f);
+}
+
+void keyboard_disable() {
+	outb(0x61, inb(0x61) | 0x80);
+}
+
+void keyboard_restart() {
+	keyboard_disable();
+	keyboard_enable();
+}
+
+static void keyboard_handler(registers_t regs) {
+	uint8_t scancode = inb(0x60);
+	/*
+    if (scancode == 0x2A) {
+    	shift_key = 1;
+    } else if (scancode & 0xAA) {
+   		int shift_key= 0;
+    } else {
+        if (scancode & 0x80) {
+            int shiftaltctrl = 1;
+        } else {
+        	printf("%c", keyboard_map[scancode]);
+        }
+    }
+	*/
+	if (keyboard_map[scancode] != 0) {
+		// putc(keyboard_map[scancode], f_white);
+		current_char = keyboard_map[scancode];
+	}
+}
+
+uint8_t __getch(int verbose) {
+	// uint8_t result = keyboard_map[inb(0x60)];
+	// return result ? result : '\0';
+	while (current_char == '\0');
+	uint8_t temp = current_char;
+	current_char = '\0';
+	if (verbose) {
+		putc(temp, f_white);
+	}
+	return temp;
+}
+
+[FILE]::[FILE_END]
+[FILE]::[FILE_BEGIN kernel/dev/keyboard/keyboard.h]
+//
+// keyboard.h
+//
+// created at 27/03/2021 10:07:53
+// written by llamaking136
+//
+
+// MIT License
+//     
+// Copyright (c) 2021 llamaking136
+//     
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//     
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//     
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+#if !defined(KEYBOARD_H)
+#define KEYBOARD_H
+
+#define getch() __getch(1)
+
+#include <sys/types.h>
+#include <stdio.h>
+#include "../../isr.h"
+
+extern uint8_t current_char;
+extern uint8_t keyboard_map[128];
+
+void init_keyboard();
+void keyboard_enable();
+void keyboard_disable();
+void keyboard_restart();
+static void keyboard_handler(registers_t);
+
+uint8_t __getch(int);
+
+#endif // KEYBOARD_H
+
+[FILE]::[FILE_END]
+[BACKUP]::[BAK_END]
