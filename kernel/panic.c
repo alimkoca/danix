@@ -109,5 +109,6 @@ void panic(string str, ...) {
 		}
 		str++;
 	}
+	printf("\nDebug info:\nTime since awake: %dms", millis());
 	for (;;);
 }

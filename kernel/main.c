@@ -33,6 +33,8 @@
 void kmain() {
 	kinit();
 	
+	panic("test");
+
 	while (1) getch(); // print all characters typed
 	
 	for (;;); // infinite loop for all eternity
