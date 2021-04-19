@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include "../../isr.h"
+#include "../../module.h"
 
 extern uint8_t current_char;
 extern uint8_t keyboard_map[128];

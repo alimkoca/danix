@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include "panic.h"
 #include "assembly.h"
+#include "module.h"
 
 #define SYSCALL_KERN_INT 0x80
 

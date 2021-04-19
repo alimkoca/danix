@@ -37,6 +37,7 @@
 #include "dev/speaker/speaker.h"
 #include "version.h"
 #include "timer.h"
+#include "module.h"
 
 void panic(string, ...);
 

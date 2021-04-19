@@ -9,12 +9,14 @@ uint64_t tick = 0;
 
 static void timer_callback(registers_t regs)
 {
+	module("timer_callback");
     tick++;
 	// printf("Tick: %d\r", tick / 1000);
 }
 
 void init_timer(u32int frequency)
 {
+	module("init_timer");
     // Firstly, register our timer callback.
     register_interrupt_handler(IRQ0, &timer_callback, "timer");
 

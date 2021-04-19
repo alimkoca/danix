@@ -1,7 +1,7 @@
 //
-// main.c
+// module.h
 //
-// created at 27/03/2021 10:07:53
+// created at 15/04/2021 14:15:25
 // written by llamaking136
 //
 
@@ -28,17 +28,11 @@
 // SOFTWARE.
 
 
-#include "main.h"
+#if !defined(MODULE_H)
+#define MODULE_H
 
-char* current_module = "";
+extern char* current_module;
 
-void kmain() {
-	module("main")
-	kinit();
-	
-	panic("test");
+#define module(curr) { current_module = curr; };
 
-	while (1) getch(); // print all characters typed
-	
-	for (;;); // infinite loop for all eternity
-}
+#endif // MODULE_H

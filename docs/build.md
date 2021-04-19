@@ -1,4 +1,4 @@
-# Building danix
+# Building DANIX
 
 Requirements to build danix:
 * GRUB Command-line Utils
@@ -13,12 +13,15 @@ Requirements to build danix:
 Supported Systems:
 * macOS
 * Linux-based Distros
-* danix (in progress)
+* DANIX (in progress)
 
 Common build errors:
 * The `iso/init` directory does not exist.
 * One of the requirements is not installed.
 
+
+For your building system, edit the `CONFIG.json` file to your compiler
+specifications.
 
 In order to build, just type:
 

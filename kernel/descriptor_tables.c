@@ -31,7 +31,7 @@ extern isr_t interrupt_handlers[];
 // initialises the GDT and IDT.
 void init_descriptor_tables()
 {
-
+	module("init_descriptor_tables");
     // Initialise the global descriptor table.
     init_gdt();
     // Initialise the interrupt descriptor table.
@@ -42,6 +42,7 @@ void init_descriptor_tables()
 
 static void init_gdt()
 {
+	module("init_gdt");
     gdt_ptr.limit = (sizeof(gdt_entry_t) * 5) - 1;
     gdt_ptr.base  = (u32int)&gdt_entries;
 
@@ -57,6 +58,7 @@ static void init_gdt()
 // Set the value of one GDT entry.
 static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int access, u8int gran)
 {
+	module("gdt_set_gate");
     gdt_entries[num].base_low    = (base & 0xFFFF);
     gdt_entries[num].base_middle = (base >> 16) & 0xFF;
     gdt_entries[num].base_high   = (base >> 24) & 0xFF;
@@ -70,6 +72,7 @@ static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int access, u8
 
 static void init_idt()
 {
+	module("init_idt");
     idt_ptr.limit = sizeof(idt_entry_t) * 256 -1;
     idt_ptr.base  = (u32int)&idt_entries;
 
@@ -141,6 +144,7 @@ static void init_idt()
 
 static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
 {
+	module("idt_set_gate");
     idt_entries[num].base_lo = base & 0xFFFF;
     idt_entries[num].base_hi = (base >> 16) & 0xFFFF;
 

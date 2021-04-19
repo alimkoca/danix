@@ -31,10 +31,12 @@
 #include "speaker.h"
 
 void init_speaker() {
+	module("init_speaker");
 	outb(0x61, inb(0x61) | 0x1);
 }
 
 void speaker_play(uint32_t hz) {
+	module("speaker_play");
 	uint32_t Div;
  	uint8_t tmp;
 
@@ -50,11 +52,13 @@ void speaker_play(uint32_t hz) {
 }
 
 void speaker_stop() {
+	module("speaker_stop");
 	uint8_t tmp = inb(0x61) & 0xFC;
  	outb(0x61, tmp);
 }
 
 void speaker_beep(uint32_t hz, uint64_t len) {
+	module("speaker_beep");
 	speaker_play(hz);
 	usleep(len);
 	speaker_stop();

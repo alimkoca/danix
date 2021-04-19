@@ -109,6 +109,9 @@ void panic(string str, ...) {
 		}
 		str++;
 	}
-	printf("\nDebug info:\nTime since awake: %dms", millis());
+	printf("\nDebug info:\n\tTime since awake: %dms\n", millis());
+	if (current_module != "") {
+		printf("\tOccured in module (or last known): %s", current_module);
+	}
 	for (;;);
 }

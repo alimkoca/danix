@@ -12,6 +12,7 @@
 isr_t interrupt_handlers[256];
 
 void register_interrupt_handler(u8int n, isr_t handler, string name) {
+	module("register_interrupt_handler");
 	// printf("[ LOG ]: a new handler (%s, %d) has been issued\n", name, n);
 	interrupt_handlers[n] = handler;
 	if (interrupt_handlers[n]) {
@@ -24,6 +25,7 @@ void register_interrupt_handler(u8int n, isr_t handler, string name) {
 // This gets called from our ASM interrupt handler stub.
 void isr_handler(registers_t regs)
 {
+	module("isr_handler");
 	if (regs.int_no == SYSCALL_KERN_INT) {
 		printf("recieved system call interrupt\n");
 	} else {
@@ -39,6 +41,7 @@ void isr_handler(registers_t regs)
 // This gets called from our ASM interrupt handler stub.
 void irq_handler(registers_t regs)
 {
+	module("irq_handler");
 	// Send an EOI (end of interrupt) signal to the PICs.
 	// If this interrupt involved the slave.
 	if (regs.int_no >= 40)

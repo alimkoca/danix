@@ -88,6 +88,7 @@ void getch() {
 */
 
 void init_keyboard() {
+	module("init_keyboard");
 	// keyboard_enable();
 	register_interrupt_handler(IRQ1, keyboard_handler, "keyboard");
 }
@@ -106,6 +107,7 @@ void keyboard_restart() {
 }
 
 static void keyboard_handler(registers_t regs) {
+	module("keyboard_handler");
 	uint8_t scancode = inb(0x60);
 	/*
     if (scancode == 0x2A) {

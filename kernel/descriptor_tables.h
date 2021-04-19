@@ -6,6 +6,7 @@
 //
 
 #include "common.h"
+#include "module.h"
 
 // Initialisation function is publicly accessible.
 void init_descriptor_tables();

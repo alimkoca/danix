@@ -36,5 +36,6 @@
 // #include "dev/vga.h"
 #include <stdio.h>
 #include "init.h"
+#include "module.h"
 
 #endif // MAIN_H

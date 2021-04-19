@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include <sys/types.h>
+#include "module.h"
 
 extern uint64_t tick;
 
