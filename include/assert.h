@@ -1,7 +1,7 @@
 //
-// panic.h
+// assert.h
 //
-// created at 27/03/2021 10:07:53
+// created at 18/04/2021 22:34:41
 // written by llamaking136
 //
 
@@ -28,19 +28,13 @@
 // SOFTWARE.
 
 
-#if !defined(PANIC_H)
-#define PANIC_H
+#if !defined(ASSERT_H)
+#define ASSERT_H
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include "dev/speaker/speaker.h"
-#include "version.h"
-#include "timer.h"
-#include "module.h"
+#define assert(equat) { if (!(equat)) { \
+			printf("Assertion failed!\n"); \
+			printf("File %s, function %s, line %d\n", __FILE__, __FUNCTION__, __LINE__); \
+		} \
+	}
 
-#define panic(msg, ...)  __panic(__FILE__,__FUNCTION__,__LINE__,msg,##__VA_ARGS__)
-
-void __panic(char*, const char*, int, string, ...);
-
-#endif // PANIC_H
+#endif // ASSERT_H

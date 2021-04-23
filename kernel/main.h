@@ -37,5 +37,6 @@
 #include <stdio.h>
 #include "init.h"
 #include "module.h"
+#include <assert.h>
 
 #endif // MAIN_H

@@ -36,7 +36,7 @@ void kmain() {
 	module("main")
 	kinit();
 	
-	panic("test");
+	// panic("test -- \"%s\", '%c', %d", "ree", '6', 420);
 
 	while (1) getch(); // print all characters typed
 	

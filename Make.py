@@ -85,12 +85,12 @@ ASSEMBLY = get_out("find " + KERNEL + " \\( -name '*.asm' -o -name '*.s' \\)")
 # ASSEMBLY.insert(0, "boot/boot.asm")
 # print(ASSEMBLY)
 CFILES = get_out("find " + KERNEL + " -name '*.c'")
-CPPFILES = get_out("find " + KERNEL + " -name '*.cpp'")
+# CPPFILES = get_out("find " + KERNEL + " -name '*.cpp'")
 OUTPUTS = ""
 for i in ASSEMBLY:
     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
 for i in CFILES:
-    OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
+    OUTPUTS += change_path(replace_ext(i.replace(KERNEL + "/", ""), "o"), "output") + " "
 # for i in CPPFILES:
 #     OUTPUTS += change_path(replace_ext(i, "o"), "output") + " "
 
@@ -118,7 +118,7 @@ def make_main():
             sys_run(NASM, NASM_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
         print("compiling all c files...")
         for i in CFILES:
-            sys_run(CC, CC_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)
+            sys_run(CC, CC_ARGS, "-o", change_path(replace_ext(i.replace("./", ""), "o"), "output"), i.replace("./", ""))
         # print("compiling all c++ files...")
         # for i in CPPFILES:
         #     sys_run(CXX, CXX_ARGS, "-o", change_path(replace_ext(i, "o"), "output"), i)

@@ -30,7 +30,7 @@
 
 #include "panic.h"
 
-void panic(string str, ...) {
+void __panic(char* file, const char* func, int line, string str, ...) {
 	// printc(str, f_white);
 	
 #if defined(BEEP)
@@ -111,7 +111,8 @@ void panic(string str, ...) {
 	}
 	printf("\nDebug info:\n\tTime since awake: %dms\n", millis());
 	if (current_module != "") {
-		printf("\tOccured in module (or last known): %s", current_module);
+		printf("\tOccured in module (or last known): %s\n", current_module);
 	}
+	printf("\tFile: %s\n\tFunction: %s\n\tLine: %d", file, func, line);
 	for (;;);
 }
