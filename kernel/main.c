@@ -37,6 +37,8 @@ void kmain() {
 	kinit();
 	
 	// panic("test -- \"%s\", '%c', %d", "ree", '6', 420);
+	
+	// assert(3 == 4);
 
 	while (1) getch(); // print all characters typed
 	

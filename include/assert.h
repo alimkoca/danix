@@ -31,10 +31,6 @@
 #if !defined(ASSERT_H)
 #define ASSERT_H
 
-#define assert(equat) { if (!(equat)) { \
-			printf("Assertion failed!\n"); \
-			printf("File %s, function %s, line %d\n", __FILE__, __FUNCTION__, __LINE__); \
-		} \
-	}
+#define assert(equat) (!(equat) ? __assert(__FILE__, __FUNCTION__, __LINE__, #equat) : nop())
 
 #endif // ASSERT_H
