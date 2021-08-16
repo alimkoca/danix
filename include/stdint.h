@@ -1,7 +1,7 @@
 //
-// string.h
+// stdint.h
 //
-// created at 27/03/2021 10:07:53
+// created at 15/08/2021 16:53:28
 // written by llamaking136
 //
 
@@ -28,16 +28,9 @@
 // SOFTWARE.
 
 
-#if !defined(STRING_H)
-#define STRING_H
+#if !defined(STDINT_H)
+#define STDINT_H
 
 #include <sys/types.h>
-#include <stdarg.h>
 
-char* strconv(uint32_t, int);
-size_t strlen(char*);
-char* strncat(char*, char*, size_t);
-char* strcat(char*, char*);
-void vsprintf(char*, char*, va_list);
-
-#endif // STRING_H
+#endif // STDINT_H

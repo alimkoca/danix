@@ -53,6 +53,7 @@ char *strcpy(char *dest, const char *src)
 
 // Concatenate the NULL-terminated string src onto
 // the end of dest, and return dest.
+/*
 char *strcat(char *dest, const char *src)
 {
     while (*dest != 0)
@@ -67,3 +68,4 @@ char *strcat(char *dest, const char *src)
     while (*src != 0);
     return dest;
 }
+*/

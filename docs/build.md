@@ -8,16 +8,22 @@ Requirements to build danix:
 * i686-elf utils (for mac)
 * python3
 * GNU Make
-* QEMU
+* QEMU (optional)
 
 Supported Systems:
 * macOS
 * Linux-based Distros
 * DANIX (in progress)
+* Windows (kind-of)
 
 Common build errors:
 * The `iso/init` directory does not exist.
 * One of the requirements is not installed.
+
+
+## Note for Windows Builders!
+You'll want to use the Windows Subsystem for Linux because the build file doesn't support Windows.
+Support might come in the future.
 
 
 For your building system, edit the `CONFIG.json` file to your compiler

@@ -32,6 +32,17 @@
 
 char* current_module = "";
 
+void print(string str, ...) {
+	va_list arg;
+	va_start(arg, str);
+
+	char* msg;
+	vsprintf(msg, str, arg);
+	printf(msg);
+
+	va_end(arg);
+}
+
 void kmain() {
 	module("main")
 	kinit();
@@ -39,6 +50,7 @@ void kmain() {
 	// panic("test -- \"%s\", '%c', %d", "ree", '6', 420);
 	
 	// assert(3 == 4);
+	print("Oh no! My %d cats are getting loose!\n", 21);
 
 	while (1) getch(); // print all characters typed
 	
