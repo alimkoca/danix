@@ -180,7 +180,7 @@ void printf(string str, ...) {
 					i = va_arg(arg, uint32_t);
 					printc(strconv(i, 8), current_color);
 					break;
-				defualt:
+				default:
 					putc('%', current_color);
 			}
 		} else if (*str == '\33') { // colors
